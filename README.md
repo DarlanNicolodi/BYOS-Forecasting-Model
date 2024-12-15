@@ -7,7 +7,7 @@ import os
 import win32com.client as win32
 
 
-# Função para prever a próxima coleta
+# Function to predict the next collection
 def prever_proxima_coleta(local, datas, data_previsao):
     # Garantir que as datas estão no formato correto (datetime) e remover inválidas
     datas = pd.to_datetime(datas, errors='coerce').dropna()
@@ -22,36 +22,36 @@ def prever_proxima_coleta(local, datas, data_previsao):
 
     return None, None, None, len(datas), None, data_ultima_coleta, dias_desde_ultima_coleta
 
-# Definir a data de previsão
+# Set the forecast date
 data_previsao = datetime(2024, 10, 1)
 
-# Carregar a planilha Excel
+# Loading the Excel spreadsheet
 df = pd.read_excel('C:/Users/cs164112/Desktop/Byos Forecast/RECOLECCION.xlsx')
 
 if 'Local' not in df.columns or 'Data Coleta' not in df.columns or 'Volume (L)' not in df.columns or 'Data Sugestão Cliente' not in df.columns:
     raise ValueError("As colunas 'Local', 'Data Coleta', 'Volume (L)' e 'Data Sugestão Cliente' são obrigatórias no arquivo Excel.")
 
-# Calcular a capacidade máxima de cada cliente como o maior volume coletado
+# Calculate the maximum capacity of each client as the largest volume collected
 df['Capacidade Máxima (L)'] = df.groupby('Local')['Volume (L)'].transform('max')
 
-# Calcular o volume total coletado de cada cliente
+# Calculate the total volume collected from each customer
 df['Volume Total Cliente'] = df.groupby('Local')['Volume (L)'].transform('sum')
 
-# Calcular o volume da primeira coleta de cada cliente
+# Calculate the volume of each client's first collection
 df['Volume Primeira Coleta'] = df.groupby('Local')['Volume (L)'].transform('first')
 
-# Calcular o volume -1St
+# Calculate the volume -1St
 df['Volume -1St'] = df['Volume Total Cliente'] - df['Volume Primeira Coleta']
 
-# Calcular os dias entre a primeira e a última coleta de cada cliente
+# Calculate the days between the first and last collection for each client
 df['Dias Entre Coletas'] = (df.groupby('Local')['Data Coleta'].transform('max') - df.groupby('Local')['Data Coleta'].transform('min')).dt.days
 
-# Calcular DAUCOP (média diária de geração de óleo usado)
+# Calculate DAUCOP (average daily waste oil generation)
 df['DAUCOP'] = (df['Volume -1St'] / df['Dias Entre Coletas']).round(2)
 
 previsoes = []
 
-# Agrupar os dados por local e prever as próximas coletas até 31 de dezembro de 2024
+# Group the data by location and forecast the next collections until December 31, 2024
 for local in df['Local'].unique():
     dados_local = df[df['Local'] == local]
     datas_coletas = dados_local['Data Coleta'].tolist()
@@ -98,41 +98,41 @@ for local in df['Local'].unique():
         numero_de_coletas += 1
 
 
-# Criar o DataFrame com as previsões
+# Create the DataFrame with the forecasts
 df_previsoes = pd.DataFrame(previsoes, columns=['Client', 'Suggested Collection Date', 'Total Volume Collected', 'Volume -1St', 'Days Between Collections', 'Daily Average Used Oil Collection (DAUCOP)', 'Maximum Storage Volume (L)', 'Days Until Next Collection', 'Last Collection Date', 'Next Collection Date', 'Number of Previous Collections', 'Days Since Last Collection'])
 
-# Salvar as previsões em um arquivo Excel
+# Save the forecasts in an Excel file
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 caminho_area_de_trabalho = os.path.join('C:/Users/cs164112/Desktop/Byos Forecast', f'collection_forecasts_{timestamp}.xlsx')
 df_previsoes.to_excel(caminho_area_de_trabalho, index=False)
 
-# Abrir o Excel automaticamente e configurar a planilha
+# Open Excel automatically and configure the spreadsheet
 oApp = win32.Dispatch('Excel.Application')
 oApp.Visible = True  # Tornar o Excel visível ao abrir o arquivo
 workbook = oApp.Workbooks.Open(caminho_area_de_trabalho)
 
 sheet = workbook.Sheets(1)
 
-# Ajustar a largura das colunas automaticamente
+# # Adjust column widths automatically
 sheet.Columns.AutoFit()
 
-# Ajustar a largura da coluna A para 28
+# Set the width of column A to 28
 sheet.Columns('A').ColumnWidth = 28
 
-# Aplicar filtros na linha de cabeçalho
+# Apply filters to the header row
 sheet.Rows(1).AutoFilter()
 
-# Congelar a primeira linha
+# Freeze the first line
 sheet.Application.ActiveWindow.SplitRow = 1
 sheet.Application.ActiveWindow.FreezePanes = True
 
-# Centralizar o texto das colunas B até J
+# Center the text in columns B to J
 sheet.Range("B:J").HorizontalAlignment = -4108  # -4108 corresponde ao valor de alinhamento central no Excel
 
-# Selecionar a célula A1 para exibição
+# Select cell A1 for display
 sheet.Range("A1").Select()
 
-# Salvar e manter o Excel aberto para visualização
+# Save and keep Excel open for viewing
 workbook.Save()
 oApp.DisplayAlerts = False  # Desativar alertas
 
